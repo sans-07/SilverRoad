@@ -1,0 +1,103 @@
+
+const express = require('express');
+const admin = require('firebase-admin');
+const cors = require('cors');
+
+// --- Firebase 서비스 계정 키 파일 경로 ---
+// 중요: 본인의 Firebase 서비스 계정 키 파일(JSON)을 다운로드하고
+// 아래 경로를 해당 파일의 실제 경로로 수정해야 합니다.
+// 예: const serviceAccount = require('./my-firebase-project-firebase-adminsdk-xxxxx-xxxxxxxxxx.json');
+const serviceAccount = require('./serviceAccountKey.json');
+
+admin.initializeApp({
+  credential: admin.credential.cert(serviceAccount)
+});
+
+const db = admin.firestore();
+const app = express();
+app.use(cors());
+app.set('json spaces', 2); // JSON 응답을 예쁘게 포맷합니다.
+const PORT = 3000;
+
+// 두 지점 간의 거리를 미터(m) 단위로 계산하는 함수 (Haversine formula)
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371e3; // 지구 반지름 (미터)
+  const φ1 = lat1 * Math.PI / 180;
+  const φ2 = lat2 * Math.PI / 180;
+  const Δφ = (lat2 - lat1) * Math.PI / 180;
+  const Δλ = (lon2 - lon1) * Math.PI / 180;
+
+  const a = Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+            Math.cos(φ1) * Math.cos(φ2) *
+            Math.sin(Δλ / 2) * Math.sin(Δλ / 2);
+  const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+
+  return R * c;
+}
+
+// 위치 데이터 클러스터링 및 분석 함수
+async function analyzeLocations() {
+  const locationsSnapshot = await db.collection('locations').get();
+  const locations = [];
+  locationsSnapshot.forEach(doc => {
+    locations.push(doc.data());
+  });
+
+  if (locations.length === 0) {
+    return [];
+  }
+
+  const clusters = [];
+  const CLUSTER_RADIUS = 100; // 클러스터로 묶을 반경 (미터)
+
+  locations.forEach(point => {
+    let foundCluster = false;
+    for (const cluster of clusters) {
+      const distance = getDistance(point.lat, point.lng, cluster.center.lat, cluster.center.lng);
+      if (distance <= CLUSTER_RADIUS) {
+        cluster.points.push(point);
+        // 클러스터의 중심점을 새로 추가된 포인트를 포함하여 다시 계산
+        const totalPoints = cluster.points.length;
+        cluster.center.lat = cluster.points.reduce((sum, p) => sum + p.lat, 0) / totalPoints;
+        cluster.center.lng = cluster.points.reduce((sum, p) => sum + p.lng, 0) / totalPoints;
+        foundCluster = true;
+        break;
+      }
+    }
+
+    if (!foundCluster) {
+      clusters.push({
+        center: { lat: point.lat, lng: point.lng },
+        points: [point],
+      });
+    }
+  });
+
+  // 각 클러스터의 방문 횟수(포인트 수)를 계산
+  const stats = clusters.map(cluster => ({
+    location: cluster.center,
+    visitCount: cluster.points.length,
+    points: cluster.points // 클러스터에 속한 포인트들
+  }));
+
+  // 방문 횟수 기준으로 내림차순 정렬
+  stats.sort((a, b) => b.visitCount - a.visitCount);
+
+  // 상위 5개 결과 반환
+  return stats.slice(0, 5);
+}
+
+// API 엔드포인트
+app.get('/api/stats', async (req, res) => {
+  try {
+    const top5Locations = await analyzeLocations();
+    res.json(top5Locations);
+  } catch (error) {
+    console.error('Error analyzing locations:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+app.listen(PORT, () => {
+  console.log(`Server is running on http://localhost:${PORT}`);
+});

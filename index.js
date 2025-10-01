@@ -2,6 +2,7 @@
 const express = require('express');
 const admin = require('firebase-admin');
 const cors = require('cors');
+const path = require('path');
 
 // --- Firebase 서비스 계정 키 파일 경로 ---
 // 중요: 본인의 Firebase 서비스 계정 키 파일(JSON)을 다운로드하고
@@ -17,7 +18,31 @@ const db = admin.firestore();
 const app = express();
 app.use(cors());
 app.set('json spaces', 2); // JSON 응답을 예쁘게 포맷합니다.
+
+// 정적 파일 제공 (HTML, CSS, JS)
+app.use(express.static(path.join(__dirname)));
+
+app.get('/', (req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 const PORT = 3000;
+
+// Firebase ID 토큰을 확인하는 미들웨어
+async function authenticateToken(req, res, next) {
+  const authHeader = req.headers.authorization;
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return res.status(401).send('Unauthorized: No token provided');
+  }
+  const idToken = authHeader.split('Bearer ')[1];
+  try {
+    const decodedToken = await admin.auth().verifyIdToken(idToken);
+    req.user = decodedToken; // 요청 객체에 사용자 정보(UID 등) 추가
+    next();
+  } catch (error) {
+    console.error('Error verifying token:', error);
+    res.status(403).send('Unauthorized: Invalid token');
+  }
+}
 
 // 두 지점 간의 거리를 미터(m) 단위로 계산하는 함수 (Haversine formula)
 function getDistance(lat1, lon1, lat2, lon2) {
@@ -35,9 +60,9 @@ function getDistance(lat1, lon1, lat2, lon2) {
   return R * c;
 }
 
-// 위치 데이터 클러스터링 및 분석 함수
-async function analyzeLocations() {
-  const locationsSnapshot = await db.collection('locations').get();
+// 위치 데이터 클러스터링 및 분석 함수 (사용자별)
+async function analyzeLocations(uid) {
+  const locationsSnapshot = await db.collection('users').doc(uid).collection('locations').get();
   const locations = [];
   locationsSnapshot.forEach(doc => {
     locations.push(doc.data());
@@ -88,9 +113,10 @@ async function analyzeLocations() {
 }
 
 // API 엔드포인트
-app.get('/api/stats', async (req, res) => {
+app.get('/api/stats', authenticateToken, async (req, res) => {
   try {
-    const top5Locations = await analyzeLocations();
+    const uid = req.user.uid;
+    const top5Locations = await analyzeLocations(uid);
     res.json(top5Locations);
   } catch (error) {
     console.error('Error analyzing locations:', error);

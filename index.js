@@ -5,10 +5,19 @@ const cors = require('cors');
 const path = require('path');
 
 // --- Firebase 서비스 계정 키 파일 경로 ---
-// 중요: 본인의 Firebase 서비스 계정 키 파일(JSON)을 다운로드하고
-// 아래 경로를 해당 파일의 실제 경로로 수정해야 합니다.
-// 예: const serviceAccount = require('./my-firebase-project-firebase-adminsdk-xxxxx-xxxxxxxxxx.json');
-const serviceAccount = require('./serviceAccountKey.json');
+let serviceAccount;
+try {
+  serviceAccount = require('./serviceAccountKey.json');
+} catch (error) {
+  console.error(`
+  =======================================================================
+  [ERROR] Firebase 서비스 계정 키 파일(serviceAccountKey.json)을 찾을 수 없습니다.
+  Firebase 콘솔에서 서비스 계정 키를 다운로드하여 프로젝트 루트에 추가해주세요.
+  이 파일은 .gitignore에 의해 Git 저장소에 포함되지 않아야 합니다.
+  =======================================================================
+  `);
+  process.exit(1); // Exit the application
+}
 
 admin.initializeApp({
   credential: admin.credential.cert(serviceAccount)
@@ -98,12 +107,16 @@ async function analyzeLocations(uid) {
     }
   });
 
-  // 각 클러스터의 방문 횟수(포인트 수)를 계산
-  const stats = clusters.map(cluster => ({
-    location: cluster.center,
-    visitCount: cluster.points.length,
-    points: cluster.points // 클러스터에 속한 포인트들
-  }));
+  // 각 클러스터의 방문 횟수와 마지막 방문 시간을 계산
+  const stats = clusters.map(cluster => {
+    // 클러스터 내 포인트들을 시간 역순으로 정렬하여 마지막 방문 시간 찾기
+    const lastVisitTime = cluster.points.sort((a, b) => b.time.localeCompare(a.time))[0].time;
+    return {
+      location: cluster.center,
+      visitCount: cluster.points.length,
+      lastVisitTime: lastVisitTime
+    };
+  });
 
   // 방문 횟수 기준으로 내림차순 정렬
   stats.sort((a, b) => b.visitCount - a.visitCount);

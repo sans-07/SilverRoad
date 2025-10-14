@@ -1,0 +1,49 @@
+(async () => {
+  if (!userLocationsCollection) {
+    console.error("사용자가 로그인되어 있지 않거나 DB에 연결되지 않았습니다. 먼저 로그인해주세요.");
+    return;
+  }
+
+  // --- 1. 기존 데이터 삭제 ---
+  console.log("기존 임시 데이터 삭제를 시작합니다...");
+  try {
+    const snapshot = await userLocationsCollection.get();
+    if (snapshot.size > 0) {
+      const deletePromises = [];
+      snapshot.forEach(doc => {
+        deletePromises.push(doc.ref.delete());
+      });
+      await Promise.all(deletePromises);
+      console.log("기존 데이터 총 " + snapshot.size + "개 삭제 완료.");
+    } else {
+      console.log("삭제할 기존 데이터가 없습니다.");
+    }
+  } catch (err) {
+    console.error("기존 데이터 삭제 중 오류 발생:", err);
+    return; // 삭제에 실패하면 더 진행하지 않음
+  }
+
+  // --- 2. 새 데이터 추가 ---
+  console.log("새로운 오각형 임시 데이터 추가를 시작합니다...");
+
+  // 테스트용 위치 데이터 (서울 시내에 오각형 모양으로 퍼뜨림)
+  const testData = [
+    { lat: 37.580, lng: 126.980, time: new Date('2025-10-15T10:00:00Z').toISOString() }, // 1. 경복궁 근처
+    { lat: 37.570, lng: 127.005, time: new Date('2025-10-15T11:00:00Z').toISOString() }, // 2. 동대문 DDP 근처
+    { lat: 37.555, lng: 126.990, time: new Date('2025-10-15T12:00:00Z').toISOString() }, // 3. 남산골 한옥마을 근처
+    { lat: 37.560, lng: 126.960, time: new Date('2025-10-15T13:00:00Z').toISOString() }, // 4. 서대문역 근처
+    { lat: 37.575, lng: 126.965, time: new Date('2025-10-15T14:00:00Z').toISOString() }, // 5. 청와대 근처
+    { lat: 37.580, lng: 126.980, time: new Date('2025-10-15T15:00:00Z').toISOString() }  // 6. 도형을 닫기 위해 1번 점(경복궁)으로 복귀
+  ];
+
+  for (const point of testData) {
+    try {
+      await userLocationsCollection.add(point);
+      console.log("데이터 추가 성공:", point);
+    } catch (err) {
+      console.error("데이터 추가 실패:", err);
+    }
+  }
+
+  console.log("새로운 임시 데이터 추가 완료! 페이지를 새로고침하여 확인하세요.");
+})();

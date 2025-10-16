@@ -1,49 +1,59 @@
-(async () => {
-  if (!userLocationsCollection) {
-    console.error("사용자가 로그인되어 있지 않거나 DB에 연결되지 않았습니다. 먼저 로그인해주세요.");
-    return;
-  }
+async function addMultiAlertTestData() {
+  console.log("다중 알림 테스트 데이터 추가를 시작합니다...");
+  const idToken = await firebase.auth().currentUser.getIdToken(true);
 
-  // --- 1. 기존 데이터 삭제 ---
-  console.log("기존 임시 데이터 삭제를 시작합니다...");
-  try {
-    const snapshot = await userLocationsCollection.get();
-    if (snapshot.size > 0) {
-      const deletePromises = [];
-      snapshot.forEach(doc => {
-        deletePromises.push(doc.ref.delete());
-      });
-      await Promise.all(deletePromises);
-      console.log("기존 데이터 총 " + snapshot.size + "개 삭제 완료.");
-    } else {
-      console.log("삭제할 기존 데이터가 없습니다.");
-    }
-  } catch (err) {
-    console.error("기존 데이터 삭제 중 오류 발생:", err);
-    return; // 삭제에 실패하면 더 진행하지 않음
-  }
-
-  // --- 2. 새 데이터 추가 ---
-  console.log("새로운 오각형 임시 데이터 추가를 시작합니다...");
-
-  // 테스트용 위치 데이터 (서울 시내에 오각형 모양으로 퍼뜨림)
-  const testData = [
-    { lat: 37.580, lng: 126.980, time: new Date('2025-10-15T10:00:00Z').toISOString() }, // 1. 경복궁 근처
-    { lat: 37.570, lng: 127.005, time: new Date('2025-10-15T11:00:00Z').toISOString() }, // 2. 동대문 DDP 근처
-    { lat: 37.555, lng: 126.990, time: new Date('2025-10-15T12:00:00Z').toISOString() }, // 3. 남산골 한옥마을 근처
-    { lat: 37.560, lng: 126.960, time: new Date('2025-10-15T13:00:00Z').toISOString() }, // 4. 서대문역 근처
-    { lat: 37.575, lng: 126.965, time: new Date('2025-10-15T14:00:00Z').toISOString() }, // 5. 청와대 근처
-    { lat: 37.580, lng: 126.980, time: new Date('2025-10-15T15:00:00Z').toISOString() }  // 6. 도형을 닫기 위해 1번 점(경복궁)으로 복귀
+  // 1. 안심존으로 설정될 위치 데이터 (서울숲 근처)
+  const safe_locations = [
+    { lat: 37.544, lng: 127.039 }, { lat: 37.545, lng: 127.038 },
+    { lat: 37.543, lng: 127.040 }, { lat: 37.546, lng: 127.037 },
+    { lat: 37.544, lng: 127.0395 }, { lat: 37.545, lng: 127.0385 },
+    { lat: 37.543, lng: 127.0405 }, { lat: 37.546, lng: 127.0375 },
+    { lat: 37.5445, lng: 127.039 }, { lat: 37.5455, lng: 127.038 },
   ];
 
-  for (const point of testData) {
+  // 2. 안심존을 벗어난 위치 데이터 (3곳)
+  const unsafe_locations = [
+    { lat: 35.179, lng: 129.075 }, // 부산
+    { lat: 36.350, lng: 127.384 }, // 대전
+    { lat: 35.160, lng: 126.851 }, // 광주
+  ];
+
+  const postLocation = async (point) => {
     try {
-      await userLocationsCollection.add(point);
-      console.log("데이터 추가 성공:", point);
+      const response = await fetch('/api/locations', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${idToken}`
+        },
+        body: JSON.stringify(point)
+      });
+      if (!response.ok) throw new Error('Server error');
+      console.log(`위치 전송 완료:`, point);
     } catch (err) {
-      console.error("데이터 추가 실패:", err);
+      console.error("API 호출 오류:", err);
+      throw err; // Stop the script on error
     }
+    await new Promise(resolve => setTimeout(resolve, 100)); // 딜레이
+  };
+
+  console.log("--- 안심존 데이터 추가 중 ---");
+  for (let i = 0; i < safe_locations.length; i++) {
+    await postLocation({
+      ...safe_locations[i],
+      time: new Date(new Date().getTime() + i * 1000).toISOString()
+    });
   }
 
-  console.log("새로운 임시 데이터 추가 완료! 페이지를 새로고침하여 확인하세요.");
-})();
+  console.log("--- 이탈 데이터 추가 중 ---");
+  for (let i = 0; i < unsafe_locations.length; i++) {
+    await postLocation({
+      ...unsafe_locations[i],
+      time: new Date(new Date().getTime() + (safe_locations.length + i) * 1000).toISOString()
+    });
+  }
+
+  alert("다중 알림 테스트 데이터 추가 완료 이제 보호자 계정으로 로그인하여 결과를 확인해보세요.");
+}
+
+addMultiAlertTestData();

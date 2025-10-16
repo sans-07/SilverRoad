@@ -26,6 +26,7 @@ admin.initializeApp({
 const db = admin.firestore();
 const app = express();
 app.use(cors());
+app.use(express.json()); // JSON 요청 본문을 파싱하기 위한 미들웨어
 app.set('json spaces', 2); // JSON 응답을 예쁘게 포맷합니다.
 
 // 정적 파일 제공 (HTML, CSS, JS)
@@ -77,8 +78,11 @@ async function analyzeLocations(uid) {
     locations.push(doc.data());
   });
 
-  if (locations.length === 0) {
-    return [];
+  if (locations.length < 5) { // 유의미한 분석을 위해 최소 5개 이상의 데이터 포인트 필요
+    return {
+      top5: [],
+      safeZone: null
+    };
   }
 
   const clusters = [];
@@ -118,21 +122,107 @@ async function analyzeLocations(uid) {
     };
   });
 
-  // 방문 횟수 기준으로 내림차순 정렬
-  stats.sort((a, b) => b.visitCount - a.visitCount);
+  // 최소 방문 횟수(예: 2회) 이상인 클러스터만 필터링
+  const MIN_VISIT_COUNT_FOR_TOP = 2;
+  const significantStats = stats.filter(s => s.visitCount >= MIN_VISIT_COUNT_FOR_TOP);
 
-  // 상위 5개 결과 반환
-  return stats.slice(0, 5);
+  // 방문 횟수 기준으로 내림차순 정렬
+  significantStats.sort((a, b) => b.visitCount - a.visitCount);
+  const top5Locations = significantStats.slice(0, 5);
+
+  if (top5Locations.length === 0) {
+    return {
+      top5: [],
+      safeZone: null
+    };
+  }
+
+  // --- 안심 영역 계산 로직 ---
+  // 1. TOP 5 클러스터의 중심점(centroid) 계산
+  const centroidLat = top5Locations.reduce((sum, stat) => sum + stat.location.lat, 0) / top5Locations.length;
+  const centroidLng = top5Locations.reduce((sum, stat) => sum + stat.location.lng, 0) / top5Locations.length;
+  const centroid = { lat: centroidLat, lng: centroidLng };
+
+  // 2. 중심점에서 가장 먼 클러스터까지의 거리를 반경으로 설정
+  let maxDistance = 0;
+  top5Locations.forEach(stat => {
+    const distance = getDistance(centroid.lat, centroid.lng, stat.location.lat, stat.location.lng);
+    if (distance > maxDistance) {
+      maxDistance = distance;
+    }
+  });
+
+  // 3. 버퍼를 추가하여 최종 반경 결정 (예: 20% 추가)
+  const radius = maxDistance * 1.2;
+
+  const safeZone = { center: centroid, radius };
+
+  return { top5: top5Locations, safeZone };
 }
 
 // API 엔드포인트
 app.get('/api/stats', authenticateToken, async (req, res) => {
   try {
     const uid = req.user.uid;
-    const top5Locations = await analyzeLocations(uid);
-    res.json(top5Locations);
+    const analysisResult = await analyzeLocations(uid);
+    res.json(analysisResult);
   } catch (error) {
     console.error('Error analyzing locations:', error);
+    res.status(500).send('Internal Server Error');
+  }
+});
+
+// 새 위치를 수신하고 안심존 이탈을 감지하는 엔드포인트
+app.post('/api/locations', authenticateToken, async (req, res) => {
+  const { lat, lng, time } = req.body;
+  const uid = req.user.uid;
+
+  if (!lat || !lng || !time) {
+    return res.status(400).send('Bad Request: Missing location data.');
+  }
+
+  try {
+    // 1. 사용자 역할 및 정보 확인
+    const userDoc = await db.collection('users').doc(uid).get();
+    if (!userDoc.exists) {
+      return res.status(404).send('User not found.');
+    }
+    const userData = userDoc.data();
+
+    // 'senior' 역할이고, 위치 데이터가 10개 이상 쌓였을 때만 이탈 감지 로직 실행
+    const locationsSnapshot = await db.collection('users').doc(uid).collection('locations').get();
+    const totalLocations = locationsSnapshot.size;
+
+    if (userData.role === 'senior' && userData.guardianId && totalLocations >= 10) {
+      // 2-1. *기존* 데이터로 안심 영역부터 계산
+      const { safeZone } = await analyzeLocations(uid);
+
+      if (safeZone) {
+        const distance = getDistance(lat, lng, safeZone.center.lat, safeZone.center.lng);
+
+        // 2-2. 안심존 반경을 벗어났는지 확인
+        if (distance > safeZone.radius) {
+          // 2-3. 알림 생성
+          await db.collection('alerts').add({
+            seniorUid: uid,
+            guardianUid: userData.guardianId,
+            location: { lat, lng },
+            time: time,
+            status: 'new',
+            createdAt: admin.firestore.FieldValue.serverTimestamp()
+          });
+          console.log(`ALERT: User ${uid} is outside their safe zone.`);
+        }
+      }
+    }
+
+    // 3. 모든 확인이 끝난 후, 새 위치 데이터 저장
+    await db.collection('users').doc(uid).collection('locations').add({ lat, lng, time });
+
+    res.status(201).send({ message: 'Location saved.' });
+
+  } catch (error) {
+    console.error('Error saving location or detecting anomaly:', error);
     res.status(500).send('Internal Server Error');
   }
 });

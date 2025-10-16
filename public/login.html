@@ -61,7 +61,7 @@
     <input type="password" id="password" placeholder="비밀번호" />
     <button id="login">로그인</button>
     <div class="role-selector">
-      <label><input type="radio" name="role" value="senior" checked> 고령자</label>
+      <label><input type="radio" name="role" value="ansim" checked> 안심이</label>
       <label><input type="radio" name="role" value="guardian"> 보호자</label>
     </div>
     <button id="register">회원가입</button>
@@ -71,15 +71,9 @@
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-auth-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/9.6.10/firebase-firestore-compat.js"></script>
-  <script>
-    const firebaseConfig = {
-      apiKey: "YOUR_API_KEY",
-      authDomain: "YOUR_PROJECT_ID.firebaseapp.com",
-      projectId: "YOUR_PROJECT_ID",
-      storageBucket: "YOUR_PROJECT_ID.appspot.com",
-      messagingSenderId: "YOUR_SENDER_ID",
-      appId: "YOUR_APP_ID"
-    };
+  <script type="module">
+    import { firebaseConfig } from './js/firebase-config.js';
+
     firebase.initializeApp(firebaseConfig);
     const auth = firebase.auth();
     const db = firebase.firestore();

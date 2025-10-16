@@ -1,4 +1,3 @@
-
 const express = require('express');
 const admin = require('firebase-admin');
 const cors = require('cors');
@@ -30,10 +29,10 @@ app.use(express.json()); // JSON 요청 본문을 파싱하기 위한 미들웨�
 app.set('json spaces', 2); // JSON 응답을 예쁘게 포맷합니다.
 
 // 정적 파일 제공 (HTML, CSS, JS)
-app.use(express.static(path.join(__dirname)));
+app.use(express.static(path.join(__dirname, 'public')));
 
 app.get('/', (req, res) => {
-  res.sendFile(path.join(__dirname, 'index.html'));
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 const PORT = 3000;
 
@@ -189,11 +188,11 @@ app.post('/api/locations', authenticateToken, async (req, res) => {
     }
     const userData = userDoc.data();
 
-    // 'senior' 역할이고, 위치 데이터가 10개 이상 쌓였을 때만 이탈 감지 로직 실행
+    // 'ansim' 역할이고, 위치 데이터가 10개 이상 쌓였을 때만 이탈 감지 로직 실행
     const locationsSnapshot = await db.collection('users').doc(uid).collection('locations').get();
     const totalLocations = locationsSnapshot.size;
 
-    if (userData.role === 'senior' && userData.guardianId && totalLocations >= 10) {
+    if (userData.role === 'ansim' && userData.guardianId && totalLocations >= 10) {
       // 2-1. *기존* 데이터로 안심 영역부터 계산
       const { safeZone } = await analyzeLocations(uid);
 
@@ -204,7 +203,7 @@ app.post('/api/locations', authenticateToken, async (req, res) => {
         if (distance > safeZone.radius) {
           // 2-3. 알림 생성
           await db.collection('alerts').add({
-            seniorUid: uid,
+            ansimUid: uid,
             guardianUid: userData.guardianId,
             location: { lat, lng },
             time: time,

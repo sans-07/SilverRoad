@@ -1,0 +1,47 @@
+/* Card.css */
+.card {
+    background-color: var(--color-bg-card);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-card);
+    padding: 32px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+    /* Subtle border for glass effect hint */
+}
+
+/* Input Styles (Often used within cards) */
+.input-group {
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.input-label {
+    display: block;
+    margin-bottom: 8px;
+    font-size: var(--font-size-sm);
+    font-weight: 600;
+    color: var(--color-text-sub);
+}
+
+.input-field {
+    width: 100%;
+    padding: 14px 16px;
+    border: 1px solid var(--color-secondary-light);
+    border-radius: var(--border-radius-md);
+    background-color: var(--color-bg-input);
+    color: var(--color-text-main);
+    transition: all 0.2s ease;
+}
+
+.input-field:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    background-color: white;
+    box-shadow: 0 0 0 3px rgba(30, 41, 59, 0.1);
+    /* Primary color ring */
+}
+
+.input-error {
+    color: var(--color-danger);
+    font-size: var(--font-size-sm);
+    margin-top: 6px;
+}

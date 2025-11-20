@@ -1,0 +1,60 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // 기본적으로 모든 접근을 차단합니다.
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // 'users' 컬렉션 규칙
+    match /users/{userId} {
+      // 본인은 자신의 문서를 읽고 업데이트할 수 있습니다.
+      // 보호자는 연결된 안심이의 문서를 읽을 수 있고, 안심이는 연결된 보호자의 문서를 읽을 수 있습니다.
+      allow read: if request.auth.uid == userId ||
+                    ( // 보호자가 자신의 안심이 정보를 읽는 경우
+                      exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                      get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'guardian' &&
+                      userId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.connectedAnsims
+                    ) ||
+                    ( // 안심이가 자신의 보호자 정보를 읽는 경우
+                      exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                      userId == get(/databases/$(database)/documents/users/$(request.auth.uid)).data.guardianId
+                    );
+      allow update, create: if request.auth.uid == userId;
+
+
+      // 'locations' 하위 컬렉션 규칙
+      match /locations/{locationId} {
+        // 본인만 자신의 위치 기록을 생성할 수 있습니다.
+        allow create: if request.auth.uid == userId;
+
+        // 본인 또는 연결된 보호자는 위치 기록을 읽을 수 있습니다.
+        allow read: if request.auth.uid == userId ||
+                      (
+                        exists(/databases/$(database)/documents/users/$(request.auth.uid)) &&
+                        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'guardian' &&
+                        userId in get(/databases/$(database)/documents/users/$(request.auth.uid)).data.connectedAnsims
+                      );
+      }
+    }
+
+    // 'connectionRequests' 컬렉션 규칙
+    match /connectionRequests/{requestId} {
+      // 안심이는 본인이 보낸 요청을 생성할 수 있습니다.
+      allow create: if request.auth.uid == request.resource.data.ansimUid;
+      // 보호자 또는 요청을 보낸 안심이 본인은 문서를 읽을 수 있습니다.
+      allow read: if request.auth.uid == resource.data.guardianUid || request.auth.uid == resource.data.ansimUid;
+      // 보호자는 요청을 수락(업데이트)하거나 거절(삭제)할 수 있습니다.
+      allow update, delete: if request.auth.uid == resource.data.guardianUid;
+    }
+
+    // 'alerts' 컬렉션 규칙
+    match /alerts/{alertId} {
+        // 서버 로직(인증된 안심이 사용자)을 통해서만 알림을 생성할 수 있습니다.
+        allow create: if request.auth.uid == request.resource.data.ansimUid;
+        // 보호자는 자신에게 온 알림을 읽고 'acknowledged'로 업데이트할 수 있습니다.
+        allow read, update: if request.auth.uid == resource.data.guardianUid;
+    }
+  }
+}

@@ -1,0 +1,68 @@
+/* GuardianView.css */
+.guardian-view-container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+}
+
+.map-wrapper {
+    width: 100%;
+    height: 100%;
+    z-index: 1;
+}
+
+/* Floating Control Panel */
+.guardian-controls-overlay {
+    position: absolute;
+    top: 24px;
+    left: 24px;
+    width: 400px;
+    max-height: calc(100% - 48px);
+    overflow-y: auto;
+    z-index: 1000;
+    background-color: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--shadow-lg);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    gap: 24px;
+    border: 1px solid rgba(255, 255, 255, 0.5);
+}
+
+.request-item {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    padding: 16px;
+    background-color: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--border-radius-md);
+    margin-bottom: 12px;
+}
+
+.request-info {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-weight: 600;
+    color: var(--color-text-main);
+}
+
+.request-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.connected-user-info {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px;
+    max-height: 50%;
+    border-radius: var(--border-radius-lg) var(--border-radius-lg) 0 0;
+    padding: 20px;
+}
+}

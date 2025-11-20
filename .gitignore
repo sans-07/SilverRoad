@@ -7,3 +7,6 @@ serviceAccountKey.json
 # Log files
 *.log
 npm-debug.log*
+
+# Environment variables file
+.env

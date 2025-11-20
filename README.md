@@ -1,64 +1,29 @@
-# Silver Road - 안심이 위치 알림 서비스
+# SilverRoad
 
-'안심이'의 위치를 '보호자'가 확인하고, 지정된 '안심존' 이탈 시 알림을 받을 수 있는 웹 애플리케이션입니다.
-
-## 주요 기능
-
--   **역할 기반 사용자 등록**: '보호자'와 '안심이' 역할 선택 가능
--   **연결 관리**: 안심이가 보호자에게 연결을 요청하고, 보호자가 수락하여 계정을 연동
--   **실시간 위치 추적**: 안심이의 위치를 주기적으로 수집하여 지도에 경로 표시
--   **자동 안심존 생성**: 자주 방문하는 위치를 기반으로 '안심존' 자동 계산 및 시각화
--   **이탈 알림**: 안심이가 안심존을 벗어날 경우, 보호자에게 실시간 알림 전송
--   **보호자 대시보드**: 연결 요청, 연결된 안심이 목록, 이탈 알림 등을 한눈에 확인
+어르신 안심 귀가 및 보호자 모니터링 서비스입니다.
 
 ## 기술 스택
 
--   **프론트엔드**: HTML, CSS, Vanilla JavaScript, Leaflet.js
--   **백엔드**: Node.js, Express.js
--   **데이터베이스 및 인증**: Firebase (Authentication, Firestore)
+- **Frontend**: React, Vite, Leaflet, Firebase
+- **Backend**: Node.js, Express, Firebase Admin
 
-## 프로젝트 구조
+## 설치 및 실행
 
--   **/public**: HTML, 클라이언트 JS, CSS 등 모든 프론트엔드 관련 파일이 위치합니다.
-    -   **/public/js**: 기능별로 모듈화된 JavaScript 파일 (`collection.js`, `ansim-view.js` 등)
--   **index.js**: Express.js를 사용한 메인 서버 파일입니다.
--   **package.json**: 프로젝트 의존성 관리 파일입니다.
+### Server
+루트 디렉토리에서 실행:
+```bash
+npm install
+npm start
+```
 
-## 설정 및 실행 방법
+### Client
+`client` 디렉토리에서 실행:
+```bash
+cd client
+npm install
+npm run dev
+```
 
-1.  **저장소 복제 및 의존성 설치**
-    ```bash
-    git clone <repository-url>
-    cd SilverRoad
-    npm install
-    ```
+## 환경 변수
 
-2.  **Firebase 설정 (2가지)**
-
-    -   **1. 클라이언트 키 (웹 API 키):**
-        -   Firebase 콘솔에서 웹 앱을 만들고 API 키 정보를 얻습니다.
-        -   `public/js/firebase-config.js` 파일을 열어, `firebaseConfig` 객체 안의 `YOUR_API_KEY` 등을 실제 값으로 교체합니다.
-
-    -   **2. 서버 키 (서비스 계정):**
-        -   Firebase 콘솔 > 프로젝트 설정 > '서비스 계정' 탭으로 이동합니다.
-        -   '새 비공개 키 생성'을 눌러 `.json` 파일을 다운로드합니다.
-        -   다운로드한 파일의 이름을 `serviceAccountKey.json`으로 변경하고, 프로젝트의 최상위 경로(루트)에 위치시킵니다.
-        -   **주의:** 이 파일은 매우 중요한 정보이므로, `.gitignore`에 포함되어 있는지 반드시 확인하고 외부에 노출되지 않도록 주의해야 합니다.
-
-3.  **서버 실행**
-    ```bash
-    node index.js
-    ```
-    서버가 3000번 포트에서 실행됩니다. 브라우저에서 `http://localhost:3000`으로 접속하세요.
-
-## 테스트용 임시 데이터 추가
-
--   **파일**: `temp_data_script.txt`
-
-`temp_data_script.txt` 파일의 스크립트를 사용하면 '안심존' 생성 및 이탈 알림 기능을 테스트하기 위한 더미 위치 데이터를 쉽게 추가할 수 있습니다.
-
-1.  '안심이' 역할의 사용자로 로그인하여 메인 페이지로 이동합니다.
-2.  브라우저에서 F12 키를 눌러 개발자 도구를 엽니다.
-3.  `temp_data_script.txt` 파일의 내용을 모두 복사합니다.
-4.  개발자 도구의 'Console' 탭에 복사한 내용을 붙여넣고 Enter 키를 누릅니다.
-5.  스크립트가 실행되면 DB에 임시 데이터가 추가됩니다. '보호자' 계정으로 다시 로그인하여 대시보드에서 알림을 확인하세요.
+루트와 `client` 디렉토리에 각각 `.env` 파일이 필요합니다.

@@ -1,0 +1,65 @@
+/* Button.css */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 12px 24px;
+    font-size: var(--font-size-base);
+    font-weight: 600;
+    border-radius: var(--border-radius-md);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    border: none;
+    text-decoration: none;
+}
+
+.btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+
+/* Primary Button (Deep Navy) */
+.btn-primary {
+    background-color: var(--color-primary);
+    color: var(--color-text-inverse);
+    box-shadow: var(--shadow-md);
+}
+
+.btn-primary:hover:not(:disabled) {
+    background-color: var(--color-primary-light);
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-lg);
+}
+
+.btn-primary:active:not(:disabled) {
+    transform: translateY(0);
+    background-color: var(--color-primary-dark);
+}
+
+/* Secondary Button (Silver/Gray) */
+.btn-secondary {
+    background-color: var(--color-bg-input);
+    color: var(--color-text-main);
+    border: 1px solid var(--color-secondary-light);
+}
+
+.btn-secondary:hover:not(:disabled) {
+    background-color: var(--color-secondary-light);
+    color: var(--color-primary);
+}
+
+/* Danger Button (Red) */
+.btn-danger {
+    background-color: var(--color-danger);
+    color: white;
+}
+
+.btn-danger:hover:not(:disabled) {
+    background-color: #dc2626;
+    /* Darker red */
+}
+
+/* Full Width Utility */
+.btn-block {
+    width: 100%;
+}

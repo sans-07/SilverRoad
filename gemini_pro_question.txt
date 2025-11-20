@@ -1,0 +1,44 @@
+### **제목:** react-leaflet 지도가 데스크톱 뷰에서 너비(width)가 0이 되어 사라지는 문제
+
+### **본문:**
+
+안녕하세요. React와 `react-leaflet`을 사용하여 지도를 구현하는 프로젝트를 진행 중입니다.
+
+**문제 상황:**
+모바일 크기의 뷰포트에서는 지도가 정상적으로 보이지만, 브라우저 창을 넓혀 데스크톱 뷰로 만들면 지도가 사라집니다.
+
+**현재 구조:**
+- **레이아웃:** 전체 레이아웃은 CSS Flexbox로 구성되어 있습니다.
+- **컴포넌트 구조:**
+  ```jsx
+  // Dashboard.jsx (부모)
+  <div style={{ display: 'flex', flexDirection: 'column' }}>
+    <AnsimView />
+  </div>
+
+  // AnsimView.jsx (자식)
+  <div className="ansim-container">
+    <div className="ansim-controls" />
+    <div className="map-container">
+      <MapContainer>
+        <MapResizer />
+      </MapContainer>
+    </div>
+  </div>
+  ```
+- **주요 CSS:**
+  ```css
+  .ansim-container { display: flex; flex-direction: row; }
+  .ansim-controls { flex: 0 0 320px; /* 고정 너비 */}
+  .map-container { flex-grow: 1; min-width: 0; /* 가변 너비 */}
+  ```
+
+**지금까지 시도해 본 것:**
+1.  `react-leaflet`의 `useMap` 훅과 `ResizeObserver`를 사용하여, 지도 컨테이너의 크기가 변경될 때마다 `map.invalidateSize()`를 호출하는 `<MapResizer />` 컴포넌트를 제작하여 적용했습니다.
+2.  콘솔 로그를 통해 확인한 결과, 뷰포트 크기를 변경할 때마다 `ResizeObserver`가 정상적으로 작동하며 `map.invalidateSize()`도 **성공적으로 호출되고 있습니다.**
+
+**핵심 발견:**
+`ResizeObserver`가 반환하는 `DOMRectReadOnly` 객체를 분석한 결과, 데스크톱 뷰에서 `.map-container`의 **`width` 값이 `0`**으로 측정되는 것을 확인했습니다. `height` 값은 정상입니다. 이 때문에 `invalidateSize()`가 호출되어도 지도가 보이지 않는 것으로 판단됩니다.
+
+**질문:**
+Flexbox 레이아웃 내에서 `flex-grow: 1`을 가진 컨테이너의 너비가 0으로 계산되는 이 문제를 해결할 가장 좋은 CSS 방법은 무엇인가요?

@@ -10,3 +10,6 @@ npm-debug.log*
 
 # Environment variables file
 .env
+
+# Archive
+archive/

@@ -41,39 +41,106 @@ export const guardianService = {
     },
 
     approveConnectionRequest: async (requestId, guardianId, ansimId) => {
-        const batch = db.batch();
+        const currentUser = firebase.auth().currentUser;
+        if (!currentUser) throw new Error("User not authenticated");
 
-        const requestRef = db.collection('connectionRequests').doc(requestId);
-        batch.update(requestRef, { status: 'approved' });
-
-        const guardianRef = db.collection('users').doc(guardianId);
-        batch.update(guardianRef, {
-            connectedAnsims: firebase.firestore.FieldValue.arrayUnion(ansimId)
+        const idToken = await currentUser.getIdToken();
+        const response = await fetch('/api/connection/approve', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({ requestId, ansimId })
         });
 
-        const ansimRef = db.collection('users').doc(ansimId);
-        batch.update(ansimRef, {
-            guardianId: guardianId
-        });
-
-        await batch.commit();
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to approve connection');
+        }
     },
 
     rejectConnectionRequest: async (requestId) => {
-        await db.collection('connectionRequests').doc(requestId).delete();
+        const currentUser = firebase.auth().currentUser;
+        if (!currentUser) throw new Error("User not authenticated");
+
+        const idToken = await currentUser.getIdToken();
+        const response = await fetch('/api/connection/reject', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({ requestId })
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to reject connection');
+        }
     },
 
     disconnectAnsim: async (requestId, guardianId, ansimId) => {
-        const batch = db.batch();
+        const currentUser = firebase.auth().currentUser;
+        if (!currentUser) throw new Error("User not authenticated");
 
-        const requestRef = db.collection('connectionRequests').doc(requestId);
-        batch.delete(requestRef);
-
-        const guardianRef = db.collection('users').doc(guardianId);
-        batch.update(guardianRef, {
-            connectedAnsims: firebase.firestore.FieldValue.arrayRemove(ansimId)
+        const idToken = await currentUser.getIdToken();
+        const response = await fetch('/api/connection/disconnect', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${idToken}`
+            },
+            body: JSON.stringify({ requestId, ansimId })
         });
 
-        await batch.commit();
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.message || 'Failed to disconnect');
+        }
+    },
+
+    getAnsimStats: async (ansimId) => {
+        const currentUser = firebase.auth().currentUser;
+        if (!currentUser) throw new Error("User not authenticated");
+
+        const idToken = await currentUser.getIdToken();
+        const response = await fetch(`/api/guardian/ansim-stats/${ansimId}`, {
+            headers: {
+                'Authorization': `Bearer ${idToken}`
+            }
+        });
+
+        if (!response.ok) {
+            throw new Error(`Failed to fetch stats: ${response.statusText}`);
+        }
+
+        return await response.json();
+    },
+
+    saveFemToken: async (guardianId, token) => {
+        await db.collection('users').doc(guardianId).update({
+            fcmToken: token
+        });
+    },
+
+    saveSafeZone: async (ansimId, center, radius, enabled) => {
+        const user = firebase.auth().currentUser;
+        if (!user) throw new Error('Not authenticated');
+
+        const token = await user.getIdToken();
+        const response = await fetch('/api/guardian/safe-zone', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ ansimId, center, radius, enabled })
+        });
+
+        if (!response.ok) {
+            throw new Error('Failed to save safe zone');
+        }
+        return await response.json();
     }
 };

@@ -52,6 +52,35 @@ export const useGuardianData = (currentUser) => {
         return () => unsubscribe();
     }, [currentUser]);
 
+    // Request Notification Permission and Save Token
+    useEffect(() => {
+        if (!currentUser) return;
+
+        const requestPermissionAndSaveToken = async () => {
+            try {
+                // Check notification permission
+                const permission = await Notification.requestPermission();
+                if (permission === 'granted') {
+                    // Import helper dynamically or just assumes it's available since hook imports it? 
+                    // Better to import it at top of file, but let's stick to dynamic if we want to be safe or top level.
+                    // Actually, let's update imports to include getFcmToken
+                    const { getFcmToken } = await import('../firebase-init'); // Dynamic import to match existing pattern if file is huge, or just modify top level import.
+
+                    const token = await getFcmToken();
+                    if (token) {
+                        console.log("FCM Token retrieved:", token);
+                        // Save token to user document
+                        await guardianService.saveFemToken(currentUser.uid, token);
+                    }
+                }
+            } catch (error) {
+                console.error("Error setting up notifications:", error);
+            }
+        };
+
+        requestPermissionAndSaveToken();
+    }, [currentUser]);
+
     const approveRequest = async (requestId) => {
         try {
             const hasExisting = await guardianService.checkExistingConnections(currentUser.uid);

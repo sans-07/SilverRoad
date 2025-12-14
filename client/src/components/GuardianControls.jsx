@@ -17,7 +17,7 @@ const GuardianControls = ({
     const pendingRequests = requests.filter(r => r.status === 'pending');
 
     return (
-        <div className="guardian-controls-overlay">
+        <div className="guardian-sidebar">
             <div className="control-section">
                 <h3>연결 요청</h3>
                 {pendingRequests.length === 0 ? (

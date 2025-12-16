@@ -94,6 +94,30 @@ module.exports = (db, admin) => {
     }
   });
 
+  // API 엔드포인트: /api/guardian/set-alert-status (알림 설정 토글)
+  router.post('/guardian/set-alert-status', authenticateToken, async (req, res) => {
+    const { ansimId, enabled } = req.body;
+    const guardianUid = req.user.uid;
+
+    if (!ansimId) return res.status(400).send('Missing ansimId.');
+    if (typeof enabled !== 'boolean') return res.status(400).send('Missing enabled status.');
+
+    try {
+      const ansimDoc = await db.collection('users').doc(ansimId).get();
+      if (!ansimDoc.exists) return res.status(404).send('Ansim user not found.');
+      if (ansimDoc.data().guardianId !== guardianUid) return res.status(403).send('Forbidden.');
+
+      await db.collection('users').doc(ansimId).update({
+        alertsEnabled: enabled
+      });
+
+      res.status(200).send({ message: `Alerts ${enabled ? 'enabled' : 'disabled'}.` });
+    } catch (error) {
+      console.error('Error updating alert status:', error);
+      res.status(500).send('Internal Server Error');
+    }
+  });
+
   // API 엔드포인트: /api/locations
   router.post('/locations', authenticateToken, async (req, res) => {
     const { lat, lng, time } = req.body;
@@ -134,40 +158,45 @@ module.exports = (db, admin) => {
 
           // 범위 이탈 확인
           if (distance > safeZoneToUse.radius) {
-            // 알림 생성
-            await db.collection('alerts').add({
-              ansimUid: uid,
-              guardianUid: userData.guardianId,
-              location: { lat, lng },
-              time: time,
-              status: 'new',
-              createdAt: admin.firestore.FieldValue.serverTimestamp(),
-              reason: userData.manualSafeZone && userData.manualSafeZone.enabled ? 'manual_zone_exit' : 'auto_zone_exit'
-            });
-            console.log(`ALERT: User ${uid} is outside their safe zone.`);
+            // 알림 설정 확인 (기본값: true)
+            const alertsEnabled = userData.alertsEnabled !== false;
 
-            // FCM 전송
-            if (userData.guardianId) {
-              try {
-                const guardianDoc = await db.collection('users').doc(userData.guardianId).get();
-                if (guardianDoc.exists) {
-                  const guardianData = guardianDoc.data();
-                  if (guardianData.fcmToken) {
-                    const message = {
-                      notification: {
-                        title: '긴급 알림: 안심 구역 이탈!',
-                        body: '피보호자가 안심 구역을 벗어났습니다. 위치를 확인해주세요.'
-                      },
-                      token: guardianData.fcmToken
-                    };
+            if (alertsEnabled) {
+              // 알림 생성
+              await db.collection('alerts').add({
+                ansimUid: uid,
+                guardianUid: userData.guardianId,
+                location: { lat, lng },
+                time: time,
+                status: 'new',
+                createdAt: admin.firestore.FieldValue.serverTimestamp(),
+                reason: userData.manualSafeZone && userData.manualSafeZone.enabled ? 'manual_zone_exit' : 'auto_zone_exit'
+              });
+              console.log(`ALERT: User ${uid} is outside their safe zone.`);
 
-                    admin.messaging().send(message)
-                      .then((response) => console.log('Successfully sent message:', response))
-                      .catch((error) => console.error('Error sending message:', error));
+              // FCM 전송
+              if (userData.guardianId) {
+                try {
+                  const guardianDoc = await db.collection('users').doc(userData.guardianId).get();
+                  if (guardianDoc.exists) {
+                    const guardianData = guardianDoc.data();
+                    if (guardianData.fcmToken) {
+                      const message = {
+                        notification: {
+                          title: '긴급 알림: 안심 구역 이탈!',
+                          body: '피보호자가 안심 구역을 벗어났습니다. 위치를 확인해주세요.'
+                        },
+                        token: guardianData.fcmToken
+                      };
+
+                      admin.messaging().send(message)
+                        .then((response) => console.log('Successfully sent message:', response))
+                        .catch((error) => console.error('Error sending message:', error));
+                    }
                   }
+                } catch (error) {
+                  console.error('Error fetching guardian data for notification:', error);
                 }
-              } catch (error) {
-                console.error('Error fetching guardian data for notification:', error);
               }
             }
           }

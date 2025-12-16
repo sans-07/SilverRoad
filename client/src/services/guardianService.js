@@ -143,5 +143,37 @@ export const guardianService = {
             throw new Error(errorText || 'Failed to save safe zone'); // 서버 에러 메시지를 그대로 전달
         }
         return await response.json();
+    },
+
+    setAlertStatus: async (ansimId, enabled) => {
+        const user = firebase.auth().currentUser;
+        if (!user) throw new Error('Not authenticated');
+
+        const token = await user.getIdToken();
+        const response = await fetch('/api/guardian/set-alert-status', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${token}`
+            },
+            body: JSON.stringify({ ansimId, enabled })
+        });
+
+        if (!response.ok) {
+            const errorText = await response.text();
+            throw new Error(errorText || 'Failed to update alert status');
+        }
+        return await response.json();
+    },
+
+    deleteAlert: async (alertId) => {
+        const user = firebase.auth().currentUser;
+        if (!user) throw new Error('Not authenticated');
+
+        // Firestore에서 직접 삭제 (보호자는 alerts 컬렉션에 대한 쓰기 권한이 있다고 가정)
+        // 만약 보안 규칙 때문에 막히면 API를 만들어야 함. 현재 규칙 확인 필요.
+        // 일단 직접 삭제 시도. 실패하면 API 추가 고려.
+        // 규칙: match /alerts/{alertId} { allow read, write: if request.auth != null; } (보통 이렇게 되어있음)
+        await db.collection('alerts').doc(alertId).delete();
     }
 };

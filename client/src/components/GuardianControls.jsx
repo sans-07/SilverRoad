@@ -12,7 +12,8 @@ const GuardianControls = ({
     onGenerateSummary,
     summaryData,
     isGeneratingSummary,
-    setSummaryData
+    setSummaryData,
+    onDismissAlert
 }) => {
     const pendingRequests = requests.filter(r => r.status === 'pending');
 
@@ -115,9 +116,27 @@ const GuardianControls = ({
                                 backgroundColor: 'rgba(239, 68, 68, 0.1)',
                                 border: '1px solid var(--color-danger)',
                                 borderRadius: 'var(--border-radius-md)',
-                                fontSize: '0.875rem'
+                                fontSize: '0.875rem',
+                                position: 'relative'
                             }}>
-                                <div style={{ fontWeight: 'bold', color: 'var(--color-danger)', marginBottom: '4px' }}>
+                                <button
+                                    onClick={() => onDismissAlert(alert.id)}
+                                    style={{
+                                        position: 'absolute',
+                                        top: '8px',
+                                        right: '8px',
+                                        border: 'none',
+                                        background: 'transparent',
+                                        cursor: 'pointer',
+                                        fontSize: '14px',
+                                        color: '#666',
+                                        padding: 0
+                                    }}
+                                    title="알림 삭제"
+                                >
+                                    ✕
+                                </button>
+                                <div style={{ fontWeight: 'bold', color: 'var(--color-danger)', marginBottom: '4px', paddingRight: '15px' }}>
                                     ⚠️ 안심지역 이탈 감지!
                                 </div>
                                 <div style={{ color: 'var(--color-text-main)' }}>

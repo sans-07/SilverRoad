@@ -59,6 +59,9 @@ function GuardianView() {
   const [summaryData, setSummaryData] = useState(null);
 
   // Manual Safe Zone State
+
+
+  // Manual Safe Zone State
   const [manualSafeZone, setManualSafeZone] = useState(null);
   const [isEditingSafeZone, setIsEditingSafeZone] = useState(false);
   const [editRadius, setEditRadius] = useState(500); // Default 500m
@@ -193,6 +196,16 @@ function GuardianView() {
     }, 2000);
   };
 
+  const handleDismissAlert = async (alertId) => {
+    if (!window.confirm("이 알림을 삭제하시겠습니까?")) return;
+    try {
+      await guardianService.deleteAlert(alertId);
+    } catch (error) {
+      console.error(error);
+      alert("알림 삭제 실패: " + error.message);
+    }
+  };
+
   // Helper for distance (Haversine) - moved outside component to ensure availability
   const getDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371e3;
@@ -222,6 +235,7 @@ function GuardianView() {
         summaryData={summaryData}
         isGeneratingSummary={isGeneratingSummary}
         setSummaryData={setSummaryData}
+        onDismissAlert={handleDismissAlert}
       />
 
       {/* Manual Safe Zone Overlay */}

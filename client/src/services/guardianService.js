@@ -139,7 +139,8 @@ export const guardianService = {
         });
 
         if (!response.ok) {
-            throw new Error('Failed to save safe zone');
+            const errorText = await response.text();
+            throw new Error(errorText || 'Failed to save safe zone'); // 서버 에러 메시지를 그대로 전달
         }
         return await response.json();
     }

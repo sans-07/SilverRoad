@@ -110,33 +110,17 @@ function GuardianView() {
         const start = positionData[i];
         const end = positionData[i + 1];
 
-        // Check if either point is outside safe zone
-        let isOutside = true;
-        if (activeSafeZone) {
-          const distStart = getDistance(start.lat, start.lng, activeSafeZone.center.lat, activeSafeZone.center.lng);
-          const distEnd = getDistance(end.lat, end.lng, activeSafeZone.center.lat, activeSafeZone.center.lng);
+        // Always attempt to fetch real road path
+        // Use Kakao API for real road path
+        const roadPath = await kakaoMapService.fetchRoute(
+          { lat: start.lat, lng: start.lng },
+          { lat: end.lat, lng: end.lng }
+        );
 
-          if (distStart <= activeSafeZone.radius && distEnd <= activeSafeZone.radius) {
-            isOutside = false;
-          }
-        }
-
-        if (isOutside) {
-          // Use Kakao API for real road path
-          const roadPath = await kakaoMapService.fetchRoute(
-            { lat: start.lat, lng: start.lng },
-            { lat: end.lat, lng: end.lng }
-          );
-
-          if (roadPath) {
-            newPath.push(...roadPath);
-          } else {
-            // Fallback to straight line if API fails
-            newPath.push({ lat: start.lat, lng: start.lng });
-            newPath.push({ lat: end.lat, lng: end.lng });
-          }
+        if (roadPath) {
+          newPath.push(...roadPath);
         } else {
-          // Use straight line for inside safe zone
+          // Fallback to straight line if API fails
           newPath.push({ lat: start.lat, lng: start.lng });
           newPath.push({ lat: end.lat, lng: end.lng });
         }
@@ -209,7 +193,7 @@ function GuardianView() {
     }, 2000);
   };
 
-  // Helper for distance (Haversine) - duplicated from service for client-side quick check
+  // Helper for distance (Haversine) - moved outside component to ensure availability
   const getDistance = (lat1, lon1, lat2, lon2) => {
     const R = 6371e3;
     const φ1 = lat1 * Math.PI / 180;

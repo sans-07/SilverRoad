@@ -8,6 +8,7 @@ const path = require('path'); // Re-added path
 const authenticateToken = require('./middleware/authMiddleware'); // Import the auth middleware
 const locationRoutes = require('./routes/locationRoutes'); // Import location routes
 const connectionRoutes = require('./routes/connectionRoutes'); // Import connection routes
+const aiRoutes = require('./routes/aiRoutes'); // Import AI routes
 
 
 
@@ -49,6 +50,7 @@ app.use(cors());
 app.use(express.json()); // JSON 요청 본문을 파싱하기 위한 미들웨어
 app.use('/api', locationRoutes(db, admin)); // Use location routes, passing db and admin
 app.use('/api', connectionRoutes(db, admin)); // Use connection routes, passing db and admin
+app.use('/api', aiRoutes(db)); // Use AI routes
 app.set('json spaces', 2); // JSON 응답을 예쁘게 포맷합니다.
 
 // Content Security Policy 설정

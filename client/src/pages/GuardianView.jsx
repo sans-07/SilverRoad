@@ -178,22 +178,33 @@ function GuardianView() {
     }
   };
 
-  const handleGenerateSummary = () => {
+  const handleGenerateSummary = async () => {
+    if (!connectedAnsim) return;
+
     setIsGeneratingSummary(true);
+    setSummaryData(null); // Reset previous summary
 
-    // Simulate API call
-    setTimeout(() => {
-      const mockSummary = `오늘 ${connectedAnsim?.ansimEmail.split('@')[0] || '안심이'}님은 활동적인 하루를 보내셨네요! ☀️
+    try {
+      const response = await fetch('http://localhost:3000/api/ai/summary', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ ansimId: connectedAnsim.ansimId }),
+      });
 
-오전 10시에 **시민공원**으로 외출하셔서 약 **40분간 산책**을 즐기셨습니다.
-총 이동 거리는 **2.5km**로 어제보다 조금 더 많이 걸으셨어요. 🚶
+      if (!response.ok) {
+        throw new Error('요약 생성에 실패했습니다.');
+      }
 
-현재는 댁에서 휴식 중이십니다.
-저녁에 따뜻한 안부 전화 한 통 어떠세요? 📞`;
-
-      setSummaryData(mockSummary);
+      const data = await response.json();
+      setSummaryData(data.summary);
+    } catch (error) {
+      console.error("Summary Generation Failed:", error);
+      alert("AI 요약을 불러오는 데 실패했습니다. 잠시 후 다시 시도해주세요.");
+    } finally {
       setIsGeneratingSummary(false);
-    }, 2000);
+    }
   };
 
   const handleDismissAlert = async (alertId) => {

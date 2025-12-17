@@ -31,7 +31,7 @@ function Login() {
   return (
     <div className="login-page">
       <div className="card login-card">
-        <h1 className="brand-title">SilverRoad</h1>
+        <h1 className="brand-title">SAI(Safe With AI)로드</h1>
         <p className="subtitle">안심 귀가 & 보호 서비스</p>
 
         <form onSubmit={handleLogin}>

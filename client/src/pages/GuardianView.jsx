@@ -307,11 +307,54 @@ function GuardianView() {
             attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
           />
 
-          {positionData.map((pos, idx) => (
-            <Marker key={idx} position={[pos.lat, pos.lng]}>
-              <Popup>시간: {new Date(pos.time).toLocaleString()}</Popup>
-            </Marker>
-          ))}
+          {positionData.map((pos, idx) => {
+            // Calculate opacity: newest = 1.0, oldest = 0.3
+            const opacity = 0.3 + (idx / Math.max(positionData.length - 1, 1)) * 0.7;
+
+            // Check if this location is from today
+            const posDate = new Date(pos.time);
+            const today = new Date();
+            const isToday = posDate.toDateString() === today.toDateString();
+
+            // Check if location is inside safe zone
+            let isInsideSafeZone = true; // Default to true if no safe zone
+            if (activeSafeZone) {
+              const distanceFromCenter = getDistance(
+                pos.lat, pos.lng,
+                activeSafeZone.center.lat, activeSafeZone.center.lng
+              );
+              isInsideSafeZone = distanceFromCenter <= activeSafeZone.radius;
+            }
+
+            // Determine marker color
+            let markerColor;
+            if (isToday) {
+              // Today's markers: blue if inside safe zone, red if outside
+              markerColor = isInsideSafeZone ? '#0066cc' : '#ff0000';
+            } else {
+              // Old markers: purple
+              markerColor = '#9933cc';
+            }
+
+            const customIcon = L.divIcon({
+              className: 'custom-marker',
+              html: `<div style="opacity: ${opacity};">
+                <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M12.5 0C5.6 0 0 5.6 0 12.5c0 9.4 12.5 28.5 12.5 28.5S25 21.9 25 12.5C25 5.6 19.4 0 12.5 0z" fill="${markerColor}" stroke="#fff" stroke-width="1"/>
+                  <circle cx="12.5" cy="12.5" r="6" fill="#fff"/>
+                </svg>
+              </div>`,
+              iconSize: [25, 41],
+              iconAnchor: [12, 41],
+              popupAnchor: [1, -34]
+            });
+
+            return (
+              <Marker key={idx} position={[pos.lat, pos.lng]} icon={customIcon}>
+                <Popup>시간: {new Date(pos.time).toLocaleString()}</Popup>
+              </Marker>
+            );
+          })}
 
           {/* Render detailed path if available, otherwise fallback to simple polyline (though detailedPath should cover all) */}
           {detailedPath.length > 0 && (

@@ -21,6 +21,7 @@ import '../components/Card.css';
 import { useAuth } from '../context/AuthContext';
 import { db } from '../firebase-init';
 import MapResizer from '../components/MapResizer';
+import { kakaoMapService } from '../services/kakaoMapService';
 
 // Define custom red marker icon
 const redIcon = new L.Icon({
@@ -45,6 +46,7 @@ const greenIcon = new L.Icon({
 function AnsimView() {
   const { currentUser } = useAuth();
   const [positionData, setPositionData] = useState([]);
+  const [detailedPath, setDetailedPath] = useState([]);
   const [mapCenter, setMapCenter] = useState([37.5665, 126.9780]); // Default: Seoul
   const [isCollecting, setIsCollecting] = useState(false);
   const [intervalId, setIntervalId] = useState(null);
@@ -119,6 +121,41 @@ function AnsimView() {
 
     return () => unsubscribeLocations();
   }, [currentUser]);
+
+  // Calculate Smart Path (Road View)
+  useEffect(() => {
+    const calculatePath = async () => {
+      if (positionData.length < 2) {
+        setDetailedPath([]);
+        return;
+      }
+
+      const newPath = [];
+
+      for (let i = 0; i < positionData.length - 1; i++) {
+        const start = positionData[i];
+        const end = positionData[i + 1];
+
+        // Fetch real road path
+        const roadPath = await kakaoMapService.fetchRoute(
+          { lat: start.lat, lng: start.lng },
+          { lat: end.lat, lng: end.lng }
+        );
+
+        if (roadPath) {
+          newPath.push(...roadPath);
+        } else {
+          // Fallback to straight line
+          newPath.push({ lat: start.lat, lng: start.lng });
+          newPath.push({ lat: end.lat, lng: end.lng });
+        }
+      }
+
+      setDetailedPath(newPath);
+    };
+
+    calculatePath();
+  }, [positionData]);
 
   // Check connection status
   useEffect(() => {
@@ -322,7 +359,9 @@ function AnsimView() {
             </Marker>
           ))}
 
-          <Polyline positions={positionData.map(p => [p.lat, p.lng])} color="blue" />
+          {detailedPath.length > 0 && (
+            <Polyline positions={detailedPath.map(p => [p.lat, p.lng])} color="blue" />
+          )}
 
           {statsData.safeZone && (
             <Circle

@@ -55,6 +55,7 @@ function AnsimView() {
   const [connectionStatus, setConnectionStatus] = useState('연결되지 않음');
   const [statsData, setStatsData] = useState({ top5: [], safeZone: null });
   const [currentLocation, setCurrentLocation] = useState(null);
+  const [manualSafeZone, setManualSafeZone] = useState(null);
 
   // Watch current position
   useEffect(() => {
@@ -95,6 +96,24 @@ function AnsimView() {
     };
 
     fetchStats();
+  }, [currentUser]);
+
+  // Fetch manual safe zone
+  useEffect(() => {
+    if (!currentUser) return;
+
+    const unsubscribe = db.collection('users').doc(currentUser.uid).onSnapshot(doc => {
+      if (doc.exists) {
+        const data = doc.data();
+        if (data.manualSafeZone && data.manualSafeZone.enabled) {
+          setManualSafeZone(data.manualSafeZone);
+        } else {
+          setManualSafeZone(null);
+        }
+      }
+    });
+
+    return () => unsubscribe();
   }, [currentUser]);
 
   // Load initial location data from Firestore
@@ -363,13 +382,25 @@ function AnsimView() {
             <Polyline positions={detailedPath.map(p => [p.lat, p.lng])} color="blue" />
           )}
 
-          {statsData.safeZone && (
+          {/* Auto Safe Zone (Green) - Only show if manual is NOT enabled */}
+          {statsData.safeZone && !manualSafeZone && (
             <Circle
               center={[statsData.safeZone.center.lat, statsData.safeZone.center.lng]}
               radius={statsData.safeZone.radius}
               pathOptions={{ color: 'green', fillColor: '#0f0', fillOpacity: 0.2 }}
             >
-              <Popup>안심 영역</Popup>
+              <Popup>자동 안심 영역</Popup>
+            </Circle>
+          )}
+
+          {/* Manual Safe Zone (Blue) */}
+          {manualSafeZone && (
+            <Circle
+              center={[manualSafeZone.center.lat, manualSafeZone.center.lng]}
+              radius={manualSafeZone.radius}
+              pathOptions={{ color: 'blue', fillColor: '#00f', fillOpacity: 0.2, dashArray: '5, 10' }}
+            >
+              <Popup>수동 안심 영역</Popup>
             </Circle>
           )}
 

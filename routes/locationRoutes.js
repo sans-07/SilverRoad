@@ -118,6 +118,34 @@ module.exports = (db, admin) => {
     }
   });
 
+  // API 엔드포인트: /api/guardian/delete-alert (알림 삭제)
+  router.post('/guardian/delete-alert', authenticateToken, async (req, res) => {
+    const { alertId } = req.body;
+    const guardianUid = req.user.uid;
+
+    if (!alertId) return res.status(400).send('Missing alertId.');
+
+    try {
+      // 1. 알림 존재 여부 및 권한 확인
+      const alertDoc = await db.collection('alerts').doc(alertId).get();
+      if (!alertDoc.exists) return res.status(404).send('Alert not found.');
+
+      const alertData = alertDoc.data();
+      if (alertData.guardianUid !== guardianUid) {
+        return res.status(403).send('Forbidden: Not your alert.');
+      }
+
+      // 2. 알림 삭제
+      await db.collection('alerts').doc(alertId).delete();
+
+      res.status(200).send({ message: 'Alert deleted.' });
+    } catch (error) {
+      console.error('Error deleting alert:', error);
+      res.status(500).send('Internal Server Error');
+    }
+  });
+
+
   // API 엔드포인트: /api/locations
   router.post('/locations', authenticateToken, async (req, res) => {
     const { lat, lng, time } = req.body;

@@ -84,10 +84,6 @@ const GuardianControls = ({
 
                         {summaryData && (
                             <div className="ai-summary-card">
-                                <div className="ai-summary-header">
-                                    <span className="ai-badge">AI</span>
-                                    <span>오늘의 요약</span>
-                                </div>
                                 <div className="ai-summary-content">
                                     {summaryData}
                                 </div>

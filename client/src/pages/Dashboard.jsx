@@ -70,7 +70,7 @@ function Dashboard() {
         zIndex: 10
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-          <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-primary)' }}>SilverRoad</h1>
+          <h1 style={{ fontSize: '1.25rem', fontWeight: 800, color: 'var(--color-primary)' }}>SAI(Safe With AI)로드</h1>
           <span style={{
             fontSize: '0.875rem',
             padding: '4px 8px',
